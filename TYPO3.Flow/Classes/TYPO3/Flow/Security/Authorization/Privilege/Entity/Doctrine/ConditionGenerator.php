@@ -12,6 +12,8 @@ namespace TYPO3\Flow\Security\Authorization\Privilege\Entity\Doctrine;
  */
 
 use TYPO3\Flow\Annotations as Flow;
+use TYPO3\Flow\Object\DependencyInjection\DependencyProxy;
+use TYPO3\Flow\Object\ObjectManagerInterface;
 use TYPO3\Flow\Security\Exception\InvalidPolicyException;
 
 /**
@@ -19,11 +21,33 @@ use TYPO3\Flow\Security\Exception\InvalidPolicyException;
  */
 class ConditionGenerator
 {
+
+    /**
+     * @Flow\Inject
+     * @var ObjectManagerInterface
+     */
+    protected $objectManager;
+
     /**
      * Entity type the currently parsed expression relates to
      * @var string
      */
     protected $entityType;
+
+    /**
+     * Runtime cache for the getCurrent() getter that refers to the "globalObjects"
+     *
+     * @var array
+     */
+    protected $current;
+
+    /**
+     * Array of registered global objects that can be accessed as operands
+     *
+     * @Flow\InjectConfiguration(package="TYPO3.Flow", path="aop.globalObjects")
+     * @var array
+     */
+    protected $globalObjects = [];
 
     /**
      * @param $entityType
@@ -80,5 +104,21 @@ class ConditionGenerator
     public function getEntityType()
     {
         return $this->entityType;
+    }
+
+    /**
+     * @return array
+     */
+    public function getCurrent()
+    {
+        if ($this->current === NULL) {
+            $this->current = [];
+            foreach ($this->globalObjects as $objectName => $className) {
+                $this->current[$objectName] = new DependencyProxy($className, function () use ($className) {
+                    return $this->objectManager->get($className);
+                });
+            }
+        }
+        return $this->current;
     }
 }

@@ -1039,7 +1039,7 @@ The following example shows the matcher syntax used for entity privilege targets
       matcher: 'isType("Acme\MyPackage\RestrictableEntity") && TRUE == property("hidden")'
 
     'Acme.MyPackage.OthersEntities':
-      matcher: 'isType("Acme\MyPackage\RestrictableEntity") && !(property("ownerAccount").equals("context.securityContext.account")) && property("ownerAccount") != NULL'
+      matcher: 'isType("Acme\MyPackage\RestrictableEntity") && !(property("ownerAccount").equals(current.securityContext.account)) && property("ownerAccount") != NULL'
 
 EEL expressions are used to target the respective entities. You have to define the entity type, can match on property
 values and use global objects for comparison. Global objects (e.g. the currently authenticated account) are registered
@@ -1054,13 +1054,13 @@ entities. The following examples, taken from the functional tests, show some mor
       matcher: 'isType("Acme\MyPackage\EntityA") && property("relatedEntityB.stringValue") == "Admin"'
 
     'Acme.MyPackage.RelatedPropertyComparedWithGlobalObject:
-     matcher: 'isType("Acme\MyPackage\EntityA") && property("relatedEntityB.ownerAccount") != "context.securityContext.account" && property("relatedEntityB.ownerAccount") != NULL'
+     matcher: 'isType("Acme\MyPackage\EntityA") && property("relatedEntityB.ownerAccount") != current.securityContext.account && property("relatedEntityB.ownerAccount") != NULL'
 
     'Acme.MyPackage.CompareStringPropertyWithCollection':
       matcher: 'isType("Acme\MyPackage\EntityC") && property("simpleStringProperty").in(["Andi", "Robert", "Karsten"])'
 
     'Acme.MyPackage.ComparingWithObjectCollectionFromGlobalObjects':
-      matcher: 'isType("Acme\MyPackage\EntityC") && property("relatedEntityD").in("context.someGloablObject.someEntityDCollection")'
+      matcher: 'isType("Acme\MyPackage\EntityC") && property("relatedEntityD").in(current.someGloablObject.someEntityDCollection)'
 
 
 Internal workings of entity restrictions (EntityPrivilege)
