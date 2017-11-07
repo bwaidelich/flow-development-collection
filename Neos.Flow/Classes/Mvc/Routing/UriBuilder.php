@@ -78,6 +78,11 @@ class UriBuilder
     protected $format = null;
 
     /**
+     * @var string
+     */
+    protected $forceScheme = null;
+
+    /**
      * Sets the current request and resets the UriBuilder
      *
      * @param ActionRequest $request
@@ -247,6 +252,11 @@ class UriBuilder
         return $this->lastArguments;
     }
 
+    public function forceScheme(string $scheme)
+    {
+        $this->forceScheme = $scheme;
+    }
+
     /**
      * Resets all UriBuilder options to their default value.
      * Note: This won't reset the Request that is attached to this UriBuilder (@see setRequest())
@@ -262,6 +272,7 @@ class UriBuilder
         $this->createAbsoluteUri = false;
         $this->addQueryString = false;
         $this->argumentsToBeExcludedFromQueryString = [];
+        $this->forceScheme = null;
 
         return $this;
     }
@@ -346,17 +357,20 @@ class UriBuilder
         $arguments = Arrays::arrayMergeRecursiveOverrule($this->arguments, $arguments);
         $arguments = $this->mergeArgumentsWithRequestArguments($arguments);
 
-        $uri = $this->router->resolve($arguments);
-        $this->lastArguments = $arguments;
-        if (!$this->environment->isRewriteEnabled()) {
-            $uri = 'index.php/' . $uri;
-        }
+
         $httpRequest = $this->request->getHttpRequest();
-        if ($this->createAbsoluteUri === true) {
-            $uri = $httpRequest->getBaseUri() . $uri;
-        } else {
-            $uri = $httpRequest->getScriptRequestPath() . $uri;
-        }
+        $uriPrefix = $this->environment->isRewriteEnabled() ? 'index.php/' : '';
+        $resolveData = new ResolveData($httpRequest, $arguments, $uriPrefix, $this->createAbsoluteUri, $this->forceScheme);
+        $uri = $this->router->resolve($resolveData);
+        $this->lastArguments = $arguments;
+//        if (!$this->environment->isRewriteEnabled()) {
+//            $uri = 'index.php/' . $uri;
+//        }
+//        if ($this->createAbsoluteUri === true) {
+//            $uri = $httpRequest->getBaseUri() . $uri;
+//        } else {
+//            $uri = $httpRequest->getScriptRequestPath() . $uri;
+//        }
         if ($this->section !== '') {
             $uri .= '#' . $this->section;
         }
@@ -467,4 +481,5 @@ class UriBuilder
         }
         return '';
     }
+
 }

@@ -55,11 +55,12 @@ class ActionViewHelper extends AbstractViewHelper
      * @param array $argumentsToBeExcludedFromQueryString arguments to be removed from the URI. Only active if $addQueryString = TRUE
      * @param boolean $useParentRequest If set, the parent Request will be used instead of the current one. Note: using this argument can be a sign of undesired tight coupling, use with care
      * @param boolean $useMainRequest If set, the main Request will be used instead of the current one. Note: using this argument can be a sign of undesired tight coupling, use with care
+     * @param string $scheme
      * @return string The rendered link
      * @throws ViewHelper\Exception
      * @api
      */
-    public function render($action, array $arguments = array(), $controller = null, $package = null, $subpackage = null, $section = '', $format = '', array $additionalParams = array(), $absolute = false, $addQueryString = false, array $argumentsToBeExcludedFromQueryString = array(), $useParentRequest = false, $useMainRequest = false)
+    public function render($action, array $arguments = array(), $controller = null, $package = null, $subpackage = null, $section = '', $format = '', array $additionalParams = array(), $absolute = false, $addQueryString = false, array $argumentsToBeExcludedFromQueryString = array(), $useParentRequest = false, $useMainRequest = false, $scheme = null)
     {
         $uriBuilder = $this->controllerContext->getUriBuilder();
         if ($useParentRequest === true) {
@@ -85,6 +86,9 @@ class ActionViewHelper extends AbstractViewHelper
             ->setAddQueryString($addQueryString)
             ->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)
             ->setFormat($format);
+        if ($scheme !== null) {
+            $uriBuilder->forceScheme($scheme);
+        }
         try {
             $uri = $uriBuilder->uriFor($action, $arguments, $controller, $package, $subpackage);
         } catch (\Exception $exception) {

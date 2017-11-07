@@ -29,6 +29,7 @@ class Route
 {
     const ROUTEPART_TYPE_STATIC = 'static';
     const ROUTEPART_TYPE_DYNAMIC = 'dynamic';
+    const PATTERN_EXTRACTSCHEMEANDHOST = '/^(((?P<scheme>https?):)?\/\/)(?P<host>[^\/]+)/';
     const PATTERN_EXTRACTROUTEPARTS = '/(?P<optionalStart>\(?)(?P<dynamic>{?)(?P<content>@?[^}{\(\)]+)}?(?P<optionalEnd>\)?)/';
 
     /**
@@ -111,6 +112,25 @@ class Route
      * @var boolean
      */
     protected $isParsed = false;
+
+    /**
+     * Indicates whether this route is absolute.
+     * Absolute routes have an URI pattern that contains the HTTP host, and (optionally) the URL scheme so that it only
+     * matches/resolves certain domains
+     *
+     * @var boolean
+     */
+    protected $isAbsolute = false;
+
+    /**
+     * @var string
+     */
+    protected $host;
+
+    /**
+     * @var string
+     */
+    protected $scheme;
 
     /**
      * @Flow\Inject
@@ -333,7 +353,6 @@ class Route
      */
     public function matches(Request $httpRequest)
     {
-        $routePath = $httpRequest->getRelativePath();
         $this->matchResults = null;
         if ($this->uriPattern === null) {
             return false;
@@ -344,9 +363,17 @@ class Route
         if ($this->hasHttpMethodConstraints() && (!in_array($httpRequest->getMethod(), $this->httpMethods))) {
             return false;
         }
+        if ($this->isAbsolute) {
+            if ($this->scheme !== null && $httpRequest->getUri()->getScheme() !== $this->scheme) {
+                return false;
+            }
+            if ($httpRequest->getUri()->getHost() !== $this->host) {
+                return false;
+            }
+        }
         $matchResults = [];
 
-        $routePath = trim($routePath, '/');
+        $routePath = trim($httpRequest->getRelativePath(), '/');
         $skipOptionalParts = false;
         $optionalPartCount = 0;
         /** @var $routePart RoutePartInterface */
@@ -395,11 +422,11 @@ class Route
      * returned and $this->matchingURI contains the generated URI (excluding
      * protocol and host).
      *
-     * @param array $routeValues An array containing key/value pairs to be resolved to uri segments
+     * @param ResolveData $resolveData
      * @return boolean TRUE if this Route corresponds to the given $routeValues, otherwise FALSE
      * @throws InvalidRoutePartValueException
      */
-    public function resolves(array $routeValues)
+    public function resolves(ResolveData $resolveData)
     {
         $this->resolvedUriPath = null;
         if ($this->uriPattern === null) {
@@ -413,6 +440,7 @@ class Route
         $remainingDefaults = $this->defaults;
         $requireOptionalRouteParts = false;
         $matchingOptionalUriPortion = '';
+        $routeValues = $resolveData->getRouteValues();
         /** @var $routePart RoutePartInterface */
         foreach ($this->routeParts as $routePart) {
             if (!$routePart->resolve($routeValues)) {
@@ -474,8 +502,46 @@ class Route
                 $resolvedUriPath .= strpos($resolvedUriPath, '?') !== false ? '&' . $queryString : '?' . $queryString;
             }
         }
-        $this->resolvedUriPath = $resolvedUriPath;
+        if (!$this->matchesScheme($resolveData)) {
+            return false;
+        }
+        $resolvedUriPath = $resolveData->getUriPrefix() . $resolvedUriPath;
+        if ($this->createAbsoluteUriPath($resolveData)) {
+
+            $this->resolvedUriPath = 'ABSOLUTE/' . $resolvedUriPath;
+        } else {
+            $this->resolvedUriPath = $resolvedUriPath;
+        }
+
         return true;
+    }
+
+    private function matchesScheme(ResolveData $resolveData): bool
+    {
+        if ($this->scheme === null) {
+            return $resolveData->forcedSchemeEqualsCurrentScheme();
+        }
+        return $this->scheme === $resolveData->getCurrentScheme();
+    }
+
+    private function createAbsoluteUriPath(ResolveData $resolveData): bool
+    {
+        if ($resolveData->isAbsoluteUriForced()) {
+            return true;
+        }
+        if (!$this->isAbsolute && !$resolveData->isSchemeForced()) {
+            return false;
+        }
+        if (!$resolveData->forcedSchemeEqualsCurrentScheme()) {
+            return true;
+        }
+        if ($this->scheme !== null && $this->scheme !== $resolveData->getCurrentScheme()) {
+            return true;
+        }
+        if ($this->host !== $resolveData->getCurrentHost()) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -573,8 +639,7 @@ class Route
      * appropriate RoutePart instances.
      *
      * @return void
-     * @throws InvalidRoutePartHandlerException
-     * @throws InvalidUriPatternException
+     * @throws InvalidRoutePartHandlerException|InvalidRouteSetupException|InvalidUriPatternException
      */
     public function parse()
     {
@@ -586,12 +651,20 @@ class Route
         if (substr($this->uriPattern, -1) === '/') {
             throw new InvalidUriPatternException('The URI pattern "' . $this->uriPattern . '" of route "' . $this->getName() . '" ends with a slash, which is not allowed. You can put the trailing slash in brackets to make it optional.', 1234782997);
         }
-        if ($this->uriPattern[0] === '/') {
-            throw new InvalidUriPatternException('The URI pattern "' . $this->uriPattern . '" of route "' . $this->getName() . '" starts with a slash, which is not allowed.', 1234782983);
+        if (preg_match(self::PATTERN_EXTRACTSCHEMEANDHOST, $this->uriPattern, $matches) === 1) {
+            $this->isAbsolute = true;
+            $this->scheme = !empty($matches['scheme']) ? $matches['scheme'] : null;
+            $this->host = $matches['host'];
+            $relativeUriPattern = ltrim(preg_replace(self::PATTERN_EXTRACTSCHEMEANDHOST, '', $this->uriPattern), '\/');
+        } else {
+            if ($this->uriPattern[0] === '/') {
+                throw new InvalidUriPatternException('The URI pattern "' . $this->uriPattern . '" of route "' . $this->getName() . '" starts with a slash, which is not allowed.', 1234782983);
+            }
+            $relativeUriPattern = $this->uriPattern;
         }
 
         $matches = [];
-        preg_match_all(self::PATTERN_EXTRACTROUTEPARTS, $this->uriPattern, $matches, PREG_SET_ORDER);
+        preg_match_all(self::PATTERN_EXTRACTROUTEPARTS, $relativeUriPattern, $matches, PREG_SET_ORDER);
 
         /** @var $lastRoutePart RoutePartInterface */
         $lastRoutePart = null;

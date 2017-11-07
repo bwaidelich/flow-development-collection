@@ -160,12 +160,15 @@ class Router implements RouterInterface
      * method. If no matching route is found, an empty string is returned.
      * Note: calls of this message are cached by RouterCachingAspect
      *
-     * @param array $routeValues Key/value pairs to be resolved. E.g. array('@package' => 'MyPackage', '@controller' => 'MyController');
+     * @param ResolveData $resolveData
      * @return string
      * @throws NoMatchingRouteException
      */
-    public function resolve(array $routeValues)
+    public function resolve(ResolveData $resolveData)
     {
+        $routeValues = $resolveData->getRouteValues();
+
+        // TODO respect HTTP request when looking up cached routes!
         $cachedResolvedUriPath = $this->routerCachingService->getCachedResolvedUriPath($routeValues);
         if ($cachedResolvedUriPath !== false) {
             return $cachedResolvedUriPath;
@@ -176,7 +179,7 @@ class Router implements RouterInterface
 
         /** @var $route Route */
         foreach ($this->routes as $route) {
-            if ($route->resolves($routeValues)) {
+            if ($route->resolves($resolveData)) {
                 $this->lastResolvedRoute = $route;
                 $resolvedUriPath = $route->getResolvedUriPath();
                 if ($resolvedUriPath !== null) {
@@ -185,7 +188,7 @@ class Router implements RouterInterface
                 return $resolvedUriPath;
             }
         }
-        $this->systemLogger->log('Router resolve(): Could not resolve a route for building an URI for the given route values.', LOG_WARNING, $routeValues);
+        $this->systemLogger->log('Router resolve(): Could not resolve a route for building an URI for the given route values.', LOG_WARNING, ['routeValues' => $routeValues, 'scheme' => $resolveData->getForcedScheme()]);
         throw new NoMatchingRouteException('Could not resolve a route and its corresponding URI for the given parameters. This may be due to referring to a not existing package / controller / action while building a link or URI. Refer to log and check the backtrace for more details.', 1301610453);
     }
 

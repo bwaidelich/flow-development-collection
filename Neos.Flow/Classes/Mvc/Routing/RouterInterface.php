@@ -32,8 +32,8 @@ interface RouterInterface
      * Walks through all configured routes and calls their respective resolves-method.
      * When a matching route is found, the corresponding URI is returned.
      *
-     * @param array $routeValues
+     * @param ResolveData $resolveData
      * @return string URI
      */
-    public function resolve(array $routeValues);
+    public function resolve(ResolveData $resolveData);
 }

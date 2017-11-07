@@ -75,11 +75,12 @@ class ActionViewHelper extends AbstractTagBasedViewHelper
      * @param boolean $useParentRequest If set, the parent Request will be used instead of the current one. Note: using this argument can be a sign of undesired tight coupling, use with care
      * @param boolean $absolute By default this ViewHelper renders links with absolute URIs. If this is FALSE, a relative URI is created instead
      * @param boolean $useMainRequest If set, the main Request will be used instead of the current one. Note: using this argument can be a sign of undesired tight coupling, use with care
+     * @param string $scheme
      * @return string The rendered link
      * @throws ViewHelper\Exception
      * @api
      */
-    public function render($action, $arguments = array(), $controller = null, $package = null, $subpackage = null, $section = '', $format = '', array $additionalParams = array(), $addQueryString = false, array $argumentsToBeExcludedFromQueryString = array(), $useParentRequest = false, $absolute = true, $useMainRequest = false)
+    public function render($action, $arguments = array(), $controller = null, $package = null, $subpackage = null, $section = '', $format = '', array $additionalParams = array(), $addQueryString = false, array $argumentsToBeExcludedFromQueryString = array(), $useParentRequest = false, $absolute = true, $useMainRequest = false, $scheme = null)
     {
         $uriBuilder = $this->controllerContext->getUriBuilder();
         if ($useParentRequest) {
@@ -105,6 +106,9 @@ class ActionViewHelper extends AbstractTagBasedViewHelper
             ->setAddQueryString($addQueryString)
             ->setArgumentsToBeExcludedFromQueryString($argumentsToBeExcludedFromQueryString)
             ->setFormat($format);
+        if ($scheme !== null) {
+            $uriBuilder->forceScheme($scheme);
+        }
         try {
             $uri = $uriBuilder->uriFor($action, $arguments, $controller, $package, $subpackage);
         } catch (\Exception $exception) {
