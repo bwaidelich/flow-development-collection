@@ -214,7 +214,7 @@ class Scripts
         $configurationManager->registerConfigurationSource(new DefaultConfigurationSource($yamlSource, ConfigurationManager::CONFIGURATION_TYPE_CACHES));
         $configurationManager->registerConfigurationSource(new ObjectsConfigurationSource($yamlSource));
         $configurationManager->registerConfigurationSource(new RoutesConfigurationSource($yamlSource, $configurationManager));
-        $configurationManager->registerConfigurationSource(new PolicyConfigurationSource($yamlSource, $environment->getPathToTemporaryDirectory()));
+        $configurationManager->registerConfigurationSource(new PolicyConfigurationSource($yamlSource));
         $configurationManager->registerConfigurationSource(new SettingsConfigurationSource($yamlSource));
 
         $configurationManager->setPackages($packageManager->getFlowPackages());

@@ -12,11 +12,9 @@ namespace Neos\Flow\Tests\Unit\Configuration;
  */
 
 use Neos\Flow\Configuration\ConfigurationManager;
-use Neos\Flow\Configuration\ConfigurationType\SettingsConfigurationSource;
 use Neos\Flow\Configuration\Exception\InvalidConfigurationTypeException;
 use Neos\Flow\Configuration\Exception\ParseErrorException;
 use Neos\Flow\Configuration\Exception\RecursionException;
-use Neos\Flow\Configuration\RouteConfigurationProcessor;
 use Neos\Flow\Configuration\Source\YamlSource;
 use Neos\Flow\Core\ApplicationContext;
 use Neos\Flow\Core\Bootstrap;

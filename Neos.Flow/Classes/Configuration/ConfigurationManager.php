@@ -127,11 +127,6 @@ class ConfigurationManager
     protected $context;
 
     /**
-     * @var Source\YamlSource
-     */
-    protected $configurationSource;
-
-    /**
      * Storage of the raw special configurations
      *
      * @var array
@@ -170,17 +165,6 @@ class ConfigurationManager
     public function __construct(ApplicationContext $context)
     {
         $this->context = $context;
-    }
-
-    /**
-     * Injects the configuration source
-     *
-     * @param Source\YamlSource $configurationSource
-     * @return void
-     */
-    public function injectConfigurationSource(Source\YamlSource $configurationSource): void
-    {
-        $this->configurationSource = $configurationSource;
     }
 
     /**
@@ -229,9 +213,9 @@ class ConfigurationManager
     public function registerConfigurationType(string $configurationType, string $configurationProcessingType = self::CONFIGURATION_PROCESSING_TYPE_DEFAULT): void
     {
         if ($configurationProcessingType === self::CONFIGURATION_PROCESSING_TYPE_DEFAULT) {
-            $this->configurationSources[$configurationType] = new DefaultConfigurationSource(new YamlSource(), $configurationType);
+            $this->registerConfigurationSource(new DefaultConfigurationSource(new YamlSource(), $configurationType));
         } elseif ($configurationProcessingType === self::CONFIGURATION_PROCESSING_TYPE_APPEND) {
-            $this->configurationSources[$configurationType] = new AppendConfigurationSource(new YamlSource(), $configurationType);
+            $this->registerConfigurationSource(new AppendConfigurationSource(new YamlSource(), $configurationType));
         }
         throw new \InvalidArgumentException(sprintf('Specified invalid configuration processing type "%s" while registering custom configuration type "%s". Use registerConfigurationSource() instead.', $configurationProcessingType, $configurationType), 1365496111);
     }
@@ -245,6 +229,7 @@ class ConfigurationManager
     public function registerConfigurationSource(ConfigurationSourceInterface $configurationSource): void
     {
         $this->configurationSources[$configurationSource->getName()] = $configurationSource;
+        $this->configurations[$configurationSource->getName()] = null;
     }
 
     /**
